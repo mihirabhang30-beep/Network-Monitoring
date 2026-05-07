@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="glass-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="card-title mb-0"><i class="bi bi-people-fill"></i> All Users</h6>
+        <span class="badge bg-secondary">{{ users.total }} users</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover packet-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Created</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users.items %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="user-avatar-sm">
+                                <i class="bi bi-person-circle"></i>
+                            </div>
+                            <strong>{{ user.username }}</strong>
+                            {% if user.id == current_user.id %}
+                            <span class="badge bg-info">You</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td><small>{{ user.email }}</small></td>
+                    <td>
+                        <span class="badge {% if user.role == 'admin' %}bg-accent{% else %}bg-secondary{% endif %}">
+                            {{ user.role }}
+                        </span>
+                    </td>
+                    <td><small>{{ user.created_at.strftime('%Y-%m-%d') }}</small></td>
+                    <td>
+                        {% if user.last_login %}
+                        <small>{{ user.last_login.strftime('%Y-%m-%d %H:%M') }}</small>
+                        {% else %}
+                        <small class="text-muted">Never</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.id != current_user.id %}
+                        <div class="d-flex gap-1">
+                            <form method="POST" action="{{ url_for('admin.toggle_role', user_id=user.id) }}">
+                                <button type="submit" class="btn btn-outline-primary btn-sm" title="Toggle Role">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                                  onsubmit="return confirm('Delete user {{ user.username }}? This cannot be undone.')">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete User">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <small class="text-muted">—</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if users.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination pagination-sm justify-content-center">
+            <li class="page-item {% if not users.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('admin.user_list', page=users.prev_num) }}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            {% for p in users.iter_pages() %}
+                {% if p %}
+                <li class="page-item {% if p == users.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.user_list', page=p) }}">{{ p }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not users.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('admin.user_list', page=users.next_num) }}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

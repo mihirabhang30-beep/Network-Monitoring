@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Capture Sessions{% endblock %}
+{% block page_title %}Capture Sessions{% endblock %}
+
+{% block content %}
+<div class="glass-card p-4">
+    <h6 class="card-title mb-3"><i class="bi bi-collection-fill"></i> All Capture Sessions</h6>
+    <div class="table-responsive">
+        <table class="table table-hover packet-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Session Name</th>
+                    <th>User</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Status</th>
+                    <th>Packets</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for session, username in sessions %}
+                <tr>
+                    <td>{{ session.id }}</td>
+                    <td><strong>{{ session.session_name }}</strong></td>
+                    <td>{{ username }}</td>
+                    <td><small>{{ session.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</small></td>
+                    <td>
+                        {% if session.end_time %}
+                        <small>{{ session.end_time.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                        {% else %}<small class="text-muted">—</small>{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if session.status == 'running' %}bg-success{% elif session.status == 'stopped' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ session.status }}
+                        </span>
+                    </td>
+                    <td>{{ session.packet_count }}</td>
+                    <td>
+                        {% if session.status != 'running' %}
+                        <form method="POST" action="{{ url_for('admin.delete_session', session_id=session.id) }}"
+                              onsubmit="return confirm('Delete this session and all its packets?')">
+                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3"></i></button>
+                        </form>
+                        {% else %}<small class="text-muted">Running</small>{% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No capture sessions found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination pagination-sm justify-content-center">
+            {% for p in pagination.iter_pages() %}
+                {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.session_list', page=p) }}">{{ p }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card glass-card">
+            <div class="stat-icon bg-gradient-blue">
+                <i class="bi bi-hdd-network-fill"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Total Packets</span>
+                <span class="stat-value" id="statTotalPackets">{{ total_packets }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card glass-card">
+            <div class="stat-icon bg-gradient-green">
+                <i class="bi bi-broadcast-pin"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Active Sessions</span>
+                <span class="stat-value" id="statActiveSessions">{{ active_sessions }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card glass-card">
+            <div class="stat-icon bg-gradient-red">
+                <i class="bi bi-ban"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Blocked IPs</span>
+                <span class="stat-value" id="statBlockedIPs">{{ blocked_count }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card glass-card">
+            <div class="stat-icon bg-gradient-orange">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-label">Active Alerts</span>
+                <span class="stat-value" id="statAlerts">{{ alert_count }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Capture Controls -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="glass-card p-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <h5 class="mb-0"><i class="bi bi-activity"></i> Packet Capture</h5>
+                    <span class="capture-status badge bg-secondary" id="captureStatus">Stopped</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success btn-sm px-4" id="btnStartCapture" onclick="startCapture()">
+                        <i class="bi bi-play-fill"></i> Start Capture
+                    </button>
+                    <button class="btn btn-danger btn-sm px-4" id="btnStopCapture" onclick="stopCapture()" disabled>
+                        <i class="bi bi-stop-fill"></i> Stop Capture
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" id="btnClearTable" onclick="clearTable()">
+                        <i class="bi bi-trash3"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="glass-card p-4">
+            <h6 class="card-title mb-3"><i class="bi bi-pie-chart-fill"></i> Protocol Distribution</h6>
+            <div class="chart-container" style="height: 260px;">
+                <canvas id="protocolChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="glass-card p-4">
+            <h6 class="card-title mb-3"><i class="bi bi-bar-chart-fill"></i> Top Source IPs</h6>
+            <div class="chart-container" style="height: 260px;">
+                <canvas id="topSourcesChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Packet Table -->
+<div class="row g-4">
+    <div class="col-12">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="card-title mb-0"><i class="bi bi-table"></i> Live Packet Stream</h6>
+                <span class="badge bg-secondary" id="packetCounter">0 packets</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover packet-table" id="packetTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source IP</th>
+                            <th>Destination IP</th>
+                            <th>Protocol</th>
+                            <th>Port</th>
+                            <th>Size</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="packetTableBody">
+                        {% for pkt in recent_packets %}
+                        <tr class="{% if pkt.status == 'BLOCKED' %}row-blocked{% elif pkt.protocol == 'TCP' %}row-tcp{% elif pkt.protocol == 'UDP' %}row-udp{% elif pkt.protocol == 'ICMP' %}row-icmp{% endif %}">
+                            <td>{{ pkt.timestamp.strftime('%H:%M:%S') }}</td>
+                            <td><code>{{ pkt.src_ip }}</code></td>
+                            <td><code>{{ pkt.dst_ip }}</code></td>
+                            <td><span class="protocol-badge protocol-{{ pkt.protocol|lower }}">{{ pkt.protocol }}</span></td>
+                            <td>{{ pkt.port or '-' }}</td>
+                            <td>{{ pkt.packet_size or '-' }}</td>
+                            <td>
+                                {% if pkt.status == 'BLOCKED' %}
+                                <span class="badge bg-danger"><i class="bi bi-ban"></i> BLOCKED</span>
+                                {% else %}
+                                <span class="badge bg-success">Normal</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    // Initialize charts with server data
+    const protocolData = {{ protocol_stats | tojson }};
+    const topSourceData = {{ top_sources | tojson }};
+    initCharts(protocolData, topSourceData);
+</script>
+{% endblock %}
